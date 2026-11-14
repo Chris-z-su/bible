@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   Activity,
   ArrowRight,
@@ -16,6 +16,7 @@ import { ensureBooks, ensureStats, store, toast } from '../store'
 import { splitParentheses, timeAgo } from '../utils/format'
 import { formatDateLabel, pickDailyVerse } from '../utils/daily'
 
+const route = useRoute()
 const router = useRouter()
 const query = ref('')
 const searching = ref(false)
@@ -67,8 +68,12 @@ function cleanupDailyCache(currentKey) {
 async function loadDaily(force = false) {
   const now = new Date()
   today.value = now
-  const picked = pickDailyVerse(now)
-  const cacheKey = `bible:daily:v2:${picked.dateKey}:${picked.ref.bookId}:${picked.ref.chapter}:${picked.ref.verse}`
+  // ?daily=序号（从 1 起）可预览金句库中的指定条目，便于查看多节经文效果
+  const preview = Number(route.query.daily)
+  const picked = pickDailyVerse(now, Number.isInteger(preview) && preview > 0 ? preview - 1 : undefined)
+  const startVerse = picked.ref.verse
+  const endVerse = picked.ref.verseEnd || startVerse
+  const cacheKey = `bible:daily:v2:${picked.dateKey}:${picked.ref.bookId}:${picked.ref.chapter}:${startVerse}-${endVerse}`
   dailyLoading.value = true
   dailyError.value = false
   try {
@@ -90,12 +95,14 @@ async function loadDaily(force = false) {
       }
     }
     const chapter = await api.getChapter(picked.ref.bookId, picked.ref.chapter)
-    const verse = chapter.verses.find((item) => item.verse === picked.ref.verse)
-    if (!verse) throw new Error('今日经文不存在')
+    // 同一章内按 verse ~ verseEnd 连续取节，拼成一段展示
+    const verses = chapter.verses.filter((item) => item.verse >= startVerse && item.verse <= endVerse)
+    if (!verses.length) throw new Error('今日经文不存在')
     daily.value = {
       ...picked.ref,
+      verseEnd: endVerse > startVerse ? endVerse : undefined,
       bookName: chapter.book.name,
-      text: verse.text,
+      text: verses.map((item) => item.text).join(''),
       dateKey: picked.dateKey,
     }
     try {
@@ -164,7 +171,11 @@ function openDaily() {
   router.push({
     name: 'read',
     params: { bookId: daily.value.bookId, chapter: daily.value.chapter },
-    query: { verse: String(daily.value.verse) },
+    query: {
+      verse: daily.value.verseEnd
+        ? `${daily.value.verse}-${daily.value.verseEnd}`
+        : String(daily.value.verse),
+    },
   })
 }
 
@@ -259,7 +270,7 @@ onUnmounted(() => {
             <template v-else-if="daily">
               <p class="daily-text"><template v-for="(part, partIndex) in splitParentheses(daily.text)" :key="partIndex"><span v-if="part.paren" class="daily-paren">{{ part.text }}</span><template v-else>{{ part.text }}</template></template></p>
               <div class="daily-meta">
-                <p class="daily-ref">{{ daily.bookName }} {{ daily.chapter }}:{{ daily.verse }}</p>
+                <p class="daily-ref">{{ daily.bookName }} {{ daily.chapter }}:{{ daily.verse }}<template v-if="daily.verseEnd">-{{ daily.verseEnd }}</template></p>
                 <span v-if="daily.tag" class="daily-tag">{{ daily.tag }}</span>
               </div>
             </template>

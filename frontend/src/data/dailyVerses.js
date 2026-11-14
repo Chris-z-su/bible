@@ -348,4 +348,12 @@ export const HOT_VERSES = [
   { bookId: 19, chapter: 39, verse: 7, tag: '盼望', note: '我的指望在乎你' },
   { bookId: 25, chapter: 3, verse: 23, tag: '盼望', note: '每早晨这都是新的，你的诚实广大', dup: true },
   { bookId: 62, chapter: 3, verse: 2, tag: '盼望', note: '主若显现，我们必要像他' },
+
+  // 【多节测试】verseEnd 为同章结束节，用于验证「今日经文」连续多节展示
+  { bookId: 19, chapter: 23, verse: 1, verseEnd: 3, tag: '牧养', note: '耶和华是我的牧者（连续三节）', dup: true },
+  { bookId: 43, chapter: 3, verse: 16, verseEnd: 17, tag: '救恩', note: '神爱世人（连续两节）', dup: true },
+  { bookId: 50, chapter: 4, verse: 6, verseEnd: 7, tag: '平安', note: '应当一无挂虑（连续两节）', dup: true },
+  { bookId: 23, chapter: 40, verse: 30, verseEnd: 31, tag: '得力', note: '等候耶和华的必重新得力（连续两节）' },
+  { bookId: 45, chapter: 8, verse: 38, verseEnd: 39, tag: '确信', note: '没有什么能使我们与神的爱隔绝（连续两节）', dup: true },
+  { bookId: 4, chapter: 6, verse: 24, verseEnd: 26, tag: '赐福', note: '亚伦的祝福（连续三节）', dup: true },
 ]

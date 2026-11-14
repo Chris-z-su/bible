@@ -21,10 +21,13 @@ function hashString(input) {
   return hash >>> 0
 }
 
-/** 按日期从热门金句库中选一条；允许不同日期重复选中同一节 */
-export function pickDailyVerse(date = new Date()) {
+/** 按日期从热门金句库中选一条；允许不同日期重复选中同一节；previewIndex 可从 0 起指定条目用于预览 */
+export function pickDailyVerse(date = new Date(), previewIndex) {
   const dateKey = formatDateKey(date)
-  const index = hashString(`bible-daily:${dateKey}`) % HOT_VERSES.length
+  const forced = Number(previewIndex)
+  const index = Number.isInteger(forced) && forced >= 0 && forced < HOT_VERSES.length
+    ? forced
+    : hashString(`bible-daily:${dateKey}`) % HOT_VERSES.length
   return {
     dateKey,
     index,
