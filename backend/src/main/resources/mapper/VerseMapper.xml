@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bible.reader.mapper.VerseMapper">
+
+    <sql id="verseColumns">
+        id, book_id, chapter, verse, content
+    </sql>
+
+    <select id="findByChapter" resultType="com.bible.reader.model.Verse">
+        SELECT <include refid="verseColumns"/>
+        FROM verse
+        WHERE book_id = #{bookId} AND chapter = #{chapter}
+        ORDER BY verse ASC
+    </select>
+
+    <select id="findRange" resultType="com.bible.reader.model.Verse">
+        SELECT <include refid="verseColumns"/>
+        FROM verse
+        WHERE book_id = #{bookId}
+          AND chapter = #{chapter}
+          AND verse BETWEEN #{startVerse} AND #{endVerse}
+        ORDER BY verse ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 关键词全部 AND；% _ \ 已在 Java 侧转义，ESCAPE '\\' 让转义生效。 -->
+    <sql id="searchWhere">
+        WHERE 1 = 1
+        <if test="bookId != null">
+            AND v.book_id = #{bookId}
+        </if>
+        <foreach collection="terms" item="term">
+            AND v.content LIKE CONCAT('%', #{term}, '%') ESCAPE '\\'
+        </foreach>
+    </sql>
+
+    <select id="countSearch" resultType="long">
+        SELECT COUNT(*)
+        FROM verse v
+        <include refid="searchWhere"/>
+    </select>
+
+    <select id="search" resultType="com.bible.reader.model.Verse">
+        SELECT v.id, v.book_id, v.chapter, v.verse, v.content
+        FROM verse v
+        <include refid="searchWhere"/>
+        ORDER BY v.book_id ASC, v.chapter ASC, v.verse ASC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM verse
+    </select>
+</mapper>

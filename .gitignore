@@ -1,0 +1,14 @@
+# runtime / build
+.runtime/
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

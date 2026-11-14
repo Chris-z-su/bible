@@ -1,0 +1,61 @@
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: application/json,text/html,text/css,application/javascript
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+
+spring:
+  application:
+    name: bible-reader
+  main:
+    banner-mode: off
+  jackson:
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+  data:
+    redis:
+      host: ${APP_REDIS_HOST:127.0.0.1}
+      port: ${APP_REDIS_PORT:6379}
+      timeout: 800ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.bible.reader.model
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+
+app:
+  version: 1.0.0
+  db:
+    # 主库为系统 MySQL 3306；3307@密码 是项目内历史回退实例（可选）
+    candidates: ${APP_DB_CANDIDATES:127.0.0.1:3306,127.0.0.1:3307@11016135}
+    database: ${APP_DB_DATABASE:bible}
+    username: ${APP_DB_USERNAME:root}
+    password: ${APP_DB_PASSWORD:1106135}
+    pool-size: ${APP_DB_POOL_SIZE:10}
+  cache:
+    enabled: ${APP_CACHE_ENABLED:true}
+  elasticsearch:
+    url: ${APP_ES_URL:http://127.0.0.1:9200}
+    enabled: ${APP_ES_ENABLED:true}
+    index-prefix: ${APP_ES_INDEX_PREFIX:bible-logs}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:*}
+
+logging:
+  level:
+    com.bible.reader: info

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bible.reader.mapper.SectionTitleMapper">
+
+    <select id="findByChapter" resultType="com.bible.reader.model.SectionTitle">
+        SELECT id, book_id, chapter, verse, kind, content
+        FROM section_title
+        WHERE book_id = #{bookId} AND chapter = #{chapter}
+        ORDER BY verse ASC, id ASC
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM section_title
+    </select>
+</mapper>

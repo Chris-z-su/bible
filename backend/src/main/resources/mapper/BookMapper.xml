@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bible.reader.mapper.BookMapper">
+
+    <sql id="bookColumns">
+        id, name, short_name, english_name, english_abbr, aliases,
+        testament, category, chapter_count, verse_count, sort_order
+    </sql>
+
+    <select id="findAllOrdered" resultType="com.bible.reader.model.Book">
+        SELECT <include refid="bookColumns"/>
+        FROM book
+        ORDER BY sort_order ASC
+    </select>
+
+    <select id="findById" resultType="com.bible.reader.model.Book">
+        SELECT <include refid="bookColumns"/>
+        FROM book
+        WHERE id = #{id}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM book
+    </select>
+
+    <select id="countByTestament" resultType="long">
+        SELECT COUNT(*) FROM book WHERE testament = #{testament}
+    </select>
+</mapper>
