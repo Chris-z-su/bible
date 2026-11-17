@@ -18,8 +18,15 @@
 
 ### 启动与停止
 
+推荐用项目脚本启动（后台运行，关闭终端不影响；已在运行会自动跳过）：
+
 ```powershell
-# 启动（前台运行，窗口需保持打开）
+powershell -ExecutionPolicy Bypass -File D:\file\aidemo\bible\deploy\start-service.ps1 -Name kibana
+```
+
+手动启动（前台运行，窗口需保持打开）：
+
+```powershell
 D:\dev\kibana-7.16.2-windows-x86_64\bin\kibana.bat
 
 # 检查是否就绪

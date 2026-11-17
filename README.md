@@ -136,6 +136,22 @@ powershell -ExecutionPolicy Bypass -File D:\file\aidemo\bible\deploy\stop-all.ps
 
 ### 手动启动
 
+按名称启动单个软件（已在运行则自动跳过；后台运行，关闭终端不退出）：
+
+```powershell
+# 查看支持的服务
+powershell -ExecutionPolicy Bypass -File deploy\start-service.ps1 -List
+
+# 启动指定软件：kibana / backend / elasticsearch / redis / nginx / mysql / all
+powershell -ExecutionPolicy Bypass -File deploy\start-service.ps1 -Name kibana
+powershell -ExecutionPolicy Bypass -File deploy\start-service.ps1 -Name backend -Build   # 先构建再启动
+powershell -ExecutionPolicy Bypass -File deploy\start-service.ps1 -Name all             # 等同 start-all.ps1
+```
+
+日志输出到 `.runtime\logs\{服务名}.out.log`，PID 记录在 `.runtime\pids\{服务名}.pid`。
+
+以下为脚本内部的等价命令，便于排查：
+
 ```powershell
 # 1) MySQL：确认系统 MySQL80 服务已在 3306 运行（root/1106135）
 #    项目内 3307 仅作为回退实例，无需主动启动
