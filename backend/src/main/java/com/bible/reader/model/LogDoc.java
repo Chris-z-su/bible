@@ -26,4 +26,7 @@ public class LogDoc {
     private Integer verse;
     private String detail;
     private String app;
+    private String requestBody;
+    private String responseBody;
+    private Integer responseSize;
 }

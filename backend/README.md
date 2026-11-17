@@ -87,6 +87,9 @@ Set-Location 'D:\file\aidemo\bible\backend'
 - `WebConfig` 注册 `RequestLogInterceptor`，覆盖 `/api/**`，排除 `/api/logs/search`；
   记录 `event=api`、`METHOD path status durationMs`、path/method/status/durationMs/ip/userAgent/query，
   level 按 `>=500 ERROR / >=400 WARN / 其余 INFO`。
+- `ApiBodyCaptureFilter`（`OncePerRequestFilter`，优先级 `HIGHEST_PRECEDENCE + 10`）缓存 `/api/**` 的请求体（上限 8KB）与响应体，
+  拦截器在 `afterCompletion` 读取并写入 `requestBody`、`responseBody`、`responseSize`；过滤器结束时 `copyBodyToResponse()` 保证客户端响应不变。
+- 入参/出参写入前脱敏（`password/token/secret` 等替换为 `***`）并截断到 2000 字符；仅记录 JSON/XML/文本类型，`/api/logs/search` 排除，避免日志递归。
 - `GlobalExceptionHandler` 统一输出 `ApiResponse`，不泄漏堆栈；未知接口 404、参数错误 400。
 - 全项目使用 SLF4J，无 `System.out`。
 
@@ -100,7 +103,8 @@ backend/
     ├── java/com/bible/reader/
     │   ├── BibleReaderApplication.java
     │   ├── config/      AppProperties, DataSourceConfig, MyBatisConfig, RedisConfig,
-    │   │                AsyncConfig, WebConfig, RequestLogInterceptor, StartupRunner
+    │   │                AsyncConfig, WebConfig, RequestLogInterceptor, ApiBodyCaptureFilter,
+    │   │                StartupRunner
     │   ├── common/      ApiResponse, BizException, GlobalExceptionHandler
     │   ├── controller/  BibleController, SearchController, LogController, MetaController
     │   ├── service/     BibleService, SearchService, ReferenceParser, LogService, EsLogClient

@@ -6,6 +6,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.util.ContentCachingRequestWrapper;
+import org.springframework.web.util.ContentCachingResponseWrapper;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 /**
  * 记录所有 /api/** 的访问日志（异步），/api/logs/search 自身已在 WebConfig 中排除。
@@ -40,9 +45,47 @@ public class RequestLogInterceptor implements HandlerInterceptor {
             if (ex != null && status < 400) {
                 status = 500;
             }
-            logService.recordApi(request, status, durationMs);
+            logService.recordApi(request, status, durationMs,
+                    readRequestBody(request), readResponseBody(response), responseSize(response));
         } catch (Exception e) {
             log.debug("记录请求日志失败", e);
         }
+    }
+
+    /**
+     * 入参：仅记录文本类请求（JSON/表单），由 ApiBodyCaptureFilter 缓存。
+     */
+    private static String readRequestBody(HttpServletRequest request) {
+        if (!(request instanceof ContentCachingRequestWrapper wrapper)
+                || !isTextual(wrapper.getContentType())) {
+            return null;
+        }
+        byte[] bytes = wrapper.getContentAsByteArray();
+        return bytes.length == 0 ? null : new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 出参：仅记录文本类响应（JSON/HTML 等），由 ApiBodyCaptureFilter 缓存。
+     */
+    private static String readResponseBody(HttpServletResponse response) {
+        if (!(response instanceof ContentCachingResponseWrapper wrapper)
+                || !isTextual(wrapper.getContentType())) {
+            return null;
+        }
+        byte[] bytes = wrapper.getContentAsByteArray();
+        return bytes.length == 0 ? null : new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    private static Integer responseSize(HttpServletResponse response) {
+        return response instanceof ContentCachingResponseWrapper wrapper
+                ? wrapper.getContentSize() : null;
+    }
+
+    private static boolean isTextual(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        String type = contentType.toLowerCase(Locale.ROOT);
+        return type.contains("json") || type.contains("xml") || type.startsWith("text/");
     }
 }

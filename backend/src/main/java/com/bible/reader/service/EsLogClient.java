@@ -419,6 +419,10 @@ public class EsLogClient {
         addField(properties, "verse", "integer", null);
         addField(properties, "detail", "text", null);
         addField(properties, "app", "keyword", null);
+        // 接口入参/出参（已脱敏、截断，最多 2000 字符）
+        addField(properties, "requestBody", "text", "ik_max_word");
+        addField(properties, "responseBody", "text", "ik_max_word");
+        addField(properties, "responseSize", "integer", null);
         return root;
     }
 

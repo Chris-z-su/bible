@@ -61,7 +61,9 @@ com.bible.reader
 │   ├── MyBatisConfig          # @MapperScan
 │   ├── RedisConfig            # StringRedisTemplate / ObjectMapper
 │   ├── AsyncConfig            # logExecutor
-│   └── WebConfig              # CORS + 请求日志拦截器注册
+│   ├── WebConfig              # CORS + 请求日志拦截器注册
+│   ├── RequestLogInterceptor  # 接口日志（status/duration/入参出参）
+│   └── ApiBodyCaptureFilter   # /api/** 请求体、响应体缓存
 ├── common
 │   ├── ApiResponse<T>         # {code, message, data}
 │   ├── BizException
@@ -266,14 +268,19 @@ ES 日志检索：
 - 索引名：`bible-logs-yyyy.MM.dd`（按事件时间，Asia/Shanghai）；查询 `bible-logs-*`。
 - 启动时用 `PUT /_index_template/bible-logs-template` 创建/更新模板（best effort，失败仅 warn）：
   - `index_patterns: ["bible-logs-*"]`
-  - mapping：`@timestamp` date、`level` keyword、`event` keyword、`message` text（standard analyzer）、`path` keyword、`method` keyword、`status` integer、`durationMs` integer、`ip` keyword、`userAgent` text、`query` text、`bookId` integer、`chapter` integer、`verse` integer、`detail` text。
+  - mapping：`@timestamp` date、`level` keyword、`event` keyword、`message` text（`ik_max_word`）、`path` keyword、`method` keyword、`status` integer、`durationMs` integer、`ip` keyword、`userAgent` text、`query` text（`ik_max_word`）、`bookId` integer、`chapter` integer、`verse` integer、`detail` text、`requestBody` text（`ik_max_word`）、`responseBody` text（`ik_max_word`）、`responseSize` integer。
 
-### 5.10 请求日志拦截器
+### 5.10 请求日志拦截器与入参出参
 
-`WebConfig` 注册 `HandlerInterceptor`（或 `OncePerRequestFilter`），对所有 `/api/**`（可排除 `/api/logs/search` 自身以免刷屏）异步记录：
+`WebConfig` 注册 `RequestLogInterceptor`（`HandlerInterceptor`），对所有 `/api/**`（排除 `/api/logs/search` 自身以免刷屏）异步记录：
 
 - event=`api`；message=`GET /api/chapters/43/3 200 12ms`；path、method、status、durationMs、ip、userAgent、query（queryString）、level（>=500 ERROR，>=400 WARN，否则 INFO）。
 - 异步线程池 `logExecutor`，队列满时丢弃并计数，不允许阻塞 Tomcat 线程。
+- 入参/出参由 `ApiBodyCaptureFilter`（`OncePerRequestFilter`，`@Order(HIGHEST_PRECEDENCE + 10)`）提供：
+  - 仅包装 `/api/**`，缓存请求体（上限 8KB）与响应体，`afterCompletion` 时读取，最后 `copyBodyToResponse()` 回写，客户端响应体保持不变；
+  - 仅记录 JSON/XML/文本类型；GET 参数仍记录在 `query`，POST/PUT 的 JSON 记录在 `requestBody`；
+  - `responseBody` 为响应文本（最多 2000 字符，超出截断并以 `…` 结尾），`responseSize` 为响应字节数；
+  - 敏感字段（`password`、`passwd`、`pwd`、`token`、`secret`、`authorization`）在写入前替换为 `***`。
 - 启动时打印 banner：数据统计、MySQL 端口、Redis/ES 状态。
 
 ## 6. Redis 缓存与降级
@@ -303,6 +310,17 @@ ES 日志检索：
   "status": 200, "durationMs": 12, "ip": "127.0.0.1",
   "userAgent": "Mozilla/5.0 ...", "query": null, "bookId": 43, "chapter": 3,
   "verse": 16, "detail": "desktop", "app": "bible-reader" }
+```
+
+接口日志（`event=api`，由拦截器与 `ApiBodyCaptureFilter` 写入）：
+
+```json
+{ "@timestamp": "2026-11-17T23:34:06.683+08:00", "level": "INFO", "event": "api",
+  "message": "POST /api/logs 202 91ms", "path": "/api/logs", "method": "POST",
+  "status": 202, "durationMs": 91, "ip": "127.0.0.1", "userAgent": "Mozilla/5.0 ...",
+  "query": null, "app": "bible-reader",
+  "requestBody": "{\"event\":\"page_view\",\"path\":\"/\",\"detail\":\"kibana body capture test\"}",
+  "responseBody": "{\"code\":0,\"message\":\"accepted\",\"data\":null}", "responseSize": 43 }
 ```
 
 ## 8. 配置（application.yml）

@@ -98,6 +98,7 @@ D:\file\aidemo\bible
 ├── docs/
 │   ├── DATA_ANALYSIS.md      数据库分析报告
 │   ├── BACKEND_SPEC.md       后端 API 契约
+│   ├── KIBANA_GUIDE.md       Kibana 使用与查询语法教程
 │   └── screenshots/          界面截图
 ├── .runtime/                 本地进程、日志、截图（不参与构建）
 └── README.md
@@ -121,6 +122,7 @@ powershell -ExecutionPolicy Bypass -File D:\file\aidemo\bible\deploy\start-all.p
 | Elasticsearch 7.16.2 | 9200 | `D:\dev\elasticsearch`，512 MB 堆 |
 | Spring Boot | 8080 | `backend/target/bible-reader.jar` |
 | Nginx | 8088 | `frontend/dist` + `/api` 代理 |
+| Kibana 7.16.2（手动） | 5601 | `D:\dev\kibana-7.16.2-windows-x86_64`，不在一键启动范围内，用法见 [`docs/KIBANA_GUIDE.md`](docs/KIBANA_GUIDE.md) |
 
 启动完成后打开：**http://127.0.0.1:8088/**
 
@@ -271,9 +273,10 @@ Invoke-RestMethod 'http://127.0.0.1:8080/api/search?q=约3:16' | ConvertTo-Json 
 
 ### 今日经文
 
-- 金句库位于 [`frontend/src/data/dailyVerses.js`](frontend/src/data/dailyVerses.js)，当前 **120 条**热门金句，可直接增删对象维护。
-- 以 `YYYY-MM-DD` 日期为种子做 FNV-1a 哈希，从列表随机抽取；同一天始终展示同一节，不同日期重新抽取，**允许重复**。
-- 结果按 `bible:daily:v2:{date}:{book}:{chapter}:{verse}` 缓存在 localStorage，跨过零点后每分钟自动检查并换新。
+- 金句库位于 [`frontend/src/data/dailyVerses.js`](frontend/src/data/dailyVerses.js)，当前 **261 条**，按创造、救恩、赦免、信心、平安、勇气等 **20 个主题**分组，组内按书卷章节排序。
+- 单条格式 `{ bookId, chapter, verse, verseEnd?, tag, note? }`：`verseEnd` 表示同一章内连续多节（如诗篇 23:1-3、林前 13:4-8），卡片按区间取节拼成一段，引用显示 `23:1-3`。
+- 以 `YYYY-MM-DD` 日期为种子做 FNV-1a 哈希，从列表随机抽取；同一天始终展示同一条，不同日期重新抽取，**允许重复**。
+- 结果按 `bible:daily:v2:{date}:{book}:{chapter}:{起节}-{止节}` 缓存在 localStorage，跨过零点后每分钟自动检查并换新。
 - 卡片日期显示为 `2026年11月13日`，并展示金句主题标签与「每日更新」提示（不显示金句总数）。
 
 ### 缓存与降级
@@ -285,9 +288,11 @@ Invoke-RestMethod 'http://127.0.0.1:8080/api/search?q=约3:16' | ConvertTo-Json 
 ### 日志系统
 
 - 索引：`bible-logs-yyyy.MM.dd`，模板 `bible-logs-template`。
-- 字段：`@timestamp / level / event / message / path / method / status / durationMs / ip / userAgent / query / bookId / chapter / verse / detail`。
-- `message`、`query` 使用 **IK 中文分词**（`ik_max_word`），前端行为事件与接口日志统一检索。
+- 字段：`@timestamp / level / event / message / path / method / status / durationMs / ip / userAgent / query / bookId / chapter / verse / detail / requestBody / responseBody / responseSize`。
+- `message`、`query`、`requestBody`、`responseBody` 使用 **IK 中文分词**（`ik_max_word`），前端行为事件与接口日志统一检索。
+- 接口日志由 `RequestLogInterceptor` + `ApiBodyCaptureFilter` 记录：GET 参数在 `query`，POST/PUT 的 JSON 入参在 `requestBody`，出参在 `responseBody`（脱敏后最多 2000 字符，`responseSize` 为字节数），`durationMs` 为服务端耗时。
 - 页面支持按关键词、级别、事件、时间范围过滤，聚合展示事件分布与级别统计。
+- 可视化：本机 Kibana（<http://127.0.0.1:5601>）连接同一 Elasticsearch，数据视图 `bible-logs-*`，使用与查询语法见 [`docs/KIBANA_GUIDE.md`](docs/KIBANA_GUIDE.md)。
 
 ## 验证
 

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * 日志服务：构造审计文档、异步提交、检索代理。
@@ -27,6 +28,11 @@ public class LogService {
     public static final Set<String> LEVEL_WHITELIST = Set.of("INFO", "WARN", "ERROR");
 
     private static final int STATUS_ACCEPTED = 202;
+    /** 入参/出参最多保存 2000 字符，避免撑大日志索引 */
+    private static final int MAX_BODY_CHARS = 2000;
+    private static final Pattern SENSITIVE_JSON = Pattern.compile(
+            "(\"(?:password|passwd|pwd|token|secret|authorization)\"\\s*:\\s*\")[^\"]*(\")",
+            Pattern.CASE_INSENSITIVE);
 
     private final EsLogClient esLogClient;
     private final ThreadPoolTaskExecutor logExecutor;
@@ -40,7 +46,8 @@ public class LogService {
     /**
      * 请求日志拦截器调用：event=api。
      */
-    public void recordApi(HttpServletRequest request, int status, long durationMs) {
+    public void recordApi(HttpServletRequest request, int status, long durationMs,
+                          String requestBody, String responseBody, Integer responseSize) {
         try {
             LogDoc doc = new LogDoc();
             doc.setTimestamp(TextUtils.nowIso());
@@ -56,10 +63,27 @@ public class LogService {
             doc.setUserAgent(TextUtils.truncate(request.getHeader("User-Agent"), 512));
             doc.setQuery(TextUtils.truncate(request.getQueryString(), 512));
             doc.setApp("bible-reader");
+            doc.setRequestBody(cleanBody(requestBody));
+            doc.setResponseBody(cleanBody(responseBody));
+            doc.setResponseSize(responseSize);
             submit(doc);
         } catch (Exception e) {
             log.debug("构造请求日志失败", e);
         }
+    }
+
+    /**
+     * 脱敏并截断入参/出参：敏感字段打码，超长截断到 2000 字符。
+     */
+    private String cleanBody(String body) {
+        if (body == null || body.isBlank()) {
+            return null;
+        }
+        String masked = SENSITIVE_JSON.matcher(body).replaceAll("$1***$2");
+        if (masked.length() > MAX_BODY_CHARS) {
+            return masked.substring(0, MAX_BODY_CHARS) + "…";
+        }
+        return masked;
     }
 
     /**
